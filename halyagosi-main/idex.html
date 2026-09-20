@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <title>Halyagosi Horgásztó - Hal és Napijegy Nyilvántartás</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f4f6f8; color: #333; }
+        h1, h2 { color: #0284c7; }
+        .card { background: white; padding: 20px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        input, button { padding: 8px; margin: 5px 5px 5px 0; border: 1px solid #ccc; border-radius: 4px; }
+        button { background: #0284c7; color: white; cursor: pointer; border: none; }
+        button:hover { background: #0369a1; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background: #f8fafc; }
+        .plus { color: #16a34a; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <h1>Halyagosi Horgásztó Rendszer</h1>
+
+    <div class="card">
+        <h2>Chippelt Hal Mérése / Regisztrációja</h2>
+        <input type="text" id="chipSzam" placeholder="Chip szám">
+        <input type="number" step="0.1" id="halSuly" placeholder="Súly (kg)">
+        <button onclick="mentHal()">Mérés Mentése</button>
+    </div>
+
+    <div class="card">
+        <h2>Chippelt Halak Története és Növekedése</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Chip szám</th>
+                    <th>Dátum</th>
+                    <th>Mért súly</th>
+                    <th>Változás előzőhöz képest</th>
+                </tr>
+            </thead>
+            <tbody id="halLista">
+                <!-- Ide kerülnek a mérések -->
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        // Adatok tárolása: tömbben gyűjtjük a méréseket
+        let meresek = [];
+
+        function mentHal() {
+            const chip = document.getElementById('chipSzam').value.trim();
+            const suly = parseFloat(document.getElementById('halSuly').value);
+
+            if (!chip || isNaN(suly)) {
+                alert('Add meg a chip számot és egy érvényes súlyt!');
+                return;
+            }
+
+            const datum = new Date().toLocaleDateString('hu-HU');
+
+            // Megkeressük az adott chip korábbi méréseit, hogy számolhassunk növekedést
+            const ugyanilyenChipMérések = meresek.filter(m => m.chip === chip);
+            let valtozasSzoveg = 'Első mérés';
+            
+            if (ugyanilyenChipMérések.length > 0) {
+                // Az utolsó mérés súlya
+                const utolsoSuly = ugyanilyenChipMérések[ugyanilyenChipMérések.length - 1].suly;
+                const diff = (suly - utolsoSuly).toFixed(1);
+                
+                if (diff > 0) {
+                    valtozasSzoveg = `<span class="plus">+${diff} kg</span>`;
+                } else if (diff < 0) {
+                    valtozasSzoveg = `<span style="color:red;">${diff} kg</span>`;
+                } else {
+                    valtozasSzoveg = 'Változatlan';
+                }
+            }
+
+            // Új mérés hozzáadása a tömbhöz
+            meresek.push({ chip, datum, suly, valtozas: valtozasSzoveg });
+
+            // Mezők ürítése és lista frissítése
+            document.getElementById('chipSzam').value = '';
+            document.getElementById('halSuly').value = '';
+            frissitLista();
+        }
+
+        function frissitLista() {
+            const tbody = document.getElementById('halLista');
+            tbody.innerHTML = '';
+
+            // Végigmegyünk a méréseken (idrendben)
+            meresek.forEach(m => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${m.chip}</td>
+                    <td>${m.datum}</td>
+                    <td>${m.suly} kg</td>
+                    <td>${m.valtozas}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+    </script>
+</body>
+</html>
