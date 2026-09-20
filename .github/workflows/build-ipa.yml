@@ -4,26 +4,39 @@ jobs:
   build:
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.24.5'
           channel: 'stable'
-      - name: Build IPA
+      - name: Detect project folder
         run: |
-          # megkeresi hol van a pubspec.yaml (a dupla mappa miatt)
-          if [ -f "halyagosi-main/pubspec.yaml" ]; then cd halyagosi-main; fi
-          if [ -f "pubspec.yaml" ]; then echo "rootban van"; fi
-          # ha duplán van egymásba ágyazva
-          if [ -f "halyagosi-main/halyagosi-main/pubspec.yaml" ]; then cd halyagosi-main/halyagosi-main; fi
+          ls -la
+          ls -la halyagosi-main || true
+          ls -la halyagosi-main/halyagosi-main || true
+          if [ -f "halyagosi-main/halyagosi-main/pubspec.yaml" ]; then
+            echo "PROJECT_DIR=halyagosi-main/halyagosi-main" >> $GITHUB_ENV
+          elif [ -f "halyagosi-main/pubspec.yaml" ]; then
+            echo "PROJECT_DIR=halyagosi-main" >> $GITHUB_ENV
+          else
+            echo "PROJECT_DIR=." >> $GITHUB_ENV
+          fi
+          echo "Using PROJECT_DIR"
+          cat $GITHUB_ENV
+      - name: Build
+        working-directory: ${{ env.PROJECT_DIR }}
+        run: |
           flutter pub get
           flutter build ios --no-codesign --release
-          mkdir -p Payload
+      - name: Make IPA
+        working-directory: ${{ env.PROJECT_DIR }}
+        run: |
+          mkdir Payload
           cp -R build/ios/iphoneos/Runner.app Payload/
-          ditto -c -k --sequesterRsrc --keepParent Payload Halyagosi.ipa
+          zip -r Halyagosi.ipa Payload
           ls -lh Halyagosi.ipa
       - name: Upload IPA
         uses: actions/upload-artifact@v4
         with:
           name: Halyagosi-IPA
-          path: "**/Halyagosi.ipa"
+          path: ${{ env.PROJECT_DIR }}/Halyagosi.ipa
